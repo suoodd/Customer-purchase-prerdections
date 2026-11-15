@@ -1,0 +1,24 @@
+Column,Missing,Missing_Percent,Unique_Values
+ID,0,0.0,177086
+Start Date,0,0.0,4190
+End Date,0,0.0,4324
+Estimated Win Rate,10559,5.96,31
+Price,0,0.0,100982
+Customer Segment 1,0,0.0,7
+Customer Segment 2,0,0.0,5
+Customer Segment 3,0,0.0,7
+Customer Segment 4,0,0.0,4
+Customer Segment 5,0,0.0,2
+Unit Number,0,0.0,137
+Activity 1,0,0.0,2
+Activity 2,0,0.0,2
+Country,0,0.0,8
+City,56,0.03,25
+Product,42,0.02,163
+Competitor,1106,0.62,186
+Marketing Source,51,0.03,45
+Division,1,0.0,44
+Manager,24025,13.57,1202
+Techincal Manager,166732,94.15,325
+Customer ID,0,0.0,52865
+Result,0,0.0,2

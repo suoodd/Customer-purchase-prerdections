@@ -1,0 +1,4 @@
+Model,Best F1,Best Parameters
+Logistic Regression,0.6232347389716608,"{'model__class_weight': 'balanced', 'model__C': 1}"
+Decision Tree,0.5906745094285872,"{'model__min_samples_split': 10, 'model__min_samples_leaf': 10, 'model__max_depth': 15}"
+Naive Bayes,0.5908843079966883,{'model__alpha': 0.1}
