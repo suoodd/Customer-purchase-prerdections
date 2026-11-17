@@ -396,22 +396,6 @@ preprocessor = ColumnTransformer([
 
 models = {
 
-    "Baseline": Pipeline([
-        ("preprocess", preprocessor),
-        ("model", DummyClassifier(
-            strategy="most_frequent"
-        ))
-    ]),
-
-    "Logistic Regression": Pipeline([
-        ("preprocess", preprocessor),
-        ("model", LogisticRegression(
-            max_iter=1000,
-            solver="liblinear",
-            random_state=42
-        ))
-    ]),
-
     "Decision Tree": Pipeline([
         ("preprocess", preprocessor),
         ("model", DecisionTreeClassifier(
