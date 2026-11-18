@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import date
 
 # ---------------------------------------------------------
-# Customer Purchase Prediction - Streamlit Application
+# Customer Purchase Prediction - Decision Tree Application
 # ---------------------------------------------------------
 
 APP_DIR = Path(__file__).resolve().parent
@@ -21,29 +21,26 @@ st.set_page_config(
 
 @st.cache_resource
 def load_model():
-    """Load the trained preprocessing and Logistic Regression pipeline."""
+    """Load the trained preprocessing pipeline with the selected model."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
-            f"Model file not found: {MODEL_PATH.name}. "
-            "Place customer_purchase_model.pkl in the same folder as app.py."
+            "customer_purchase_model.pkl was not found. "
+            "Run the updated two-model training script first and keep the "
+            "generated model file in the same folder as app.py."
         )
 
     if not COLUMNS_PATH.exists():
         raise FileNotFoundError(
-            f"Feature file not found: {COLUMNS_PATH.name}. "
-            "Place model_columns.pkl in the same folder as app.py."
+            "model_columns.pkl was not found. Keep it in the same folder as app.py."
         )
 
-    model = joblib.load(MODEL_PATH)
-    feature_columns = joblib.load(COLUMNS_PATH)
-    return model, feature_columns
+    return joblib.load(MODEL_PATH), joblib.load(COLUMNS_PATH)
 
 
 st.title("Customer Purchase Prediction")
 st.write(
-    "Enter the customer and sales details below. "
-    "The application will use the trained Logistic Regression model "
-    "to predict whether the customer is likely to make a purchase."
+    "Enter the customer and sales details below. The trained Decision Tree "
+    "model will predict whether the customer is likely to make a purchase."
 )
 
 try:
@@ -53,40 +50,22 @@ except Exception as error:
     st.stop()
 
 st.info(
-    "The prediction is based on the features used during model training. "
-    "The model's output is an estimate and should support, not replace, "
-    "business decisions."
+    "The prediction is an estimate based on the information entered. "
+    "Use it as supporting information when making business decisions."
 )
 
 with st.form("purchase_prediction_form"):
     st.subheader("Sales and Customer Details")
-
     col1, col2 = st.columns(2)
 
     with col1:
-        price = st.number_input(
-            "Price",
-            min_value=0.0,
-            value=1000.0,
-            step=100.0
-        )
-        unit_number = st.number_input(
-            "Unit Number",
-            min_value=0,
-            value=1,
-            step=1
-        )
-        start_date = st.date_input(
-            "Start Date",
-            value=date.today()
-        )
+        price = st.number_input("Price", min_value=0.0, value=1000.0, step=100.0)
+        unit_number = st.number_input("Unit Number", min_value=0, value=1, step=1)
+        start_date = st.date_input("Start Date", value=date.today())
         country = st.text_input("Country", placeholder="Enter country code")
         city = st.text_input("City", placeholder="Enter city code")
         product = st.text_input("Product", placeholder="Enter product code")
-        competitor = st.text_input(
-            "Competitor",
-            placeholder="Enter competitor code"
-        )
+        competitor = st.text_input("Competitor", placeholder="Enter competitor code")
 
     with col2:
         customer_segment_1 = st.text_input("Customer Segment 1")
@@ -99,24 +78,17 @@ with st.form("purchase_prediction_form"):
         marketing_source = st.text_input("Marketing Source")
         division = st.text_input("Division")
 
-    submitted = st.form_submit_button(
-        "Predict Purchase",
-        use_container_width=True
-    )
+    submitted = st.form_submit_button("Predict Purchase", use_container_width=True)
 
 if submitted:
-    # Create the same engineered date features used during training.
     input_values = {
         "Price": price,
-        "Unit Number": unit_number,
-        "Start_Year": start_date.year,
-        "Start_Month": start_date.month,
-        "Start_Quarter": (start_date.month - 1) // 3 + 1,
         "Customer Segment 1": customer_segment_1.strip() or np.nan,
         "Customer Segment 2": customer_segment_2.strip() or np.nan,
         "Customer Segment 3": customer_segment_3.strip() or np.nan,
         "Customer Segment 4": customer_segment_4.strip() or np.nan,
         "Customer Segment 5": customer_segment_5.strip() or np.nan,
+        "Unit Number": unit_number,
         "Activity 1": activity_1.strip() or np.nan,
         "Activity 2": activity_2.strip() or np.nan,
         "Country": country.strip() or np.nan,
@@ -125,18 +97,15 @@ if submitted:
         "Competitor": competitor.strip() or np.nan,
         "Marketing Source": marketing_source.strip() or np.nan,
         "Division": division.strip() or np.nan,
+        "Start_Year": start_date.year,
+        "Start_Month": start_date.month,
+        "Start_Quarter": (start_date.month - 1) // 3 + 1,
     }
 
-    # Match the exact feature order saved with the trained model.
-    input_data = pd.DataFrame([input_values])
-    input_data = input_data.reindex(columns=feature_columns)
+    input_data = pd.DataFrame([input_values]).reindex(columns=feature_columns)
 
-    # The training script converted categorical values to strings.
-    categorical_columns = [
-        column for column in input_data.columns
-        if input_data[column].dtype == "object"
-    ]
-    for column in categorical_columns:
+    # Match the training script's conversion of categorical values to strings.
+    for column in input_data.select_dtypes(include=["object"]).columns:
         input_data[column] = input_data[column].apply(
             lambda value: str(value) if pd.notna(value) else np.nan
         )
@@ -144,31 +113,27 @@ if submitted:
     try:
         prediction = int(model.predict(input_data)[0])
         probabilities = model.predict_proba(input_data)[0]
-        purchase_probability = float(probabilities[1])
+        classes = list(model.classes_)
+        purchase_index = classes.index(1)
+        purchase_probability = float(probabilities[purchase_index])
 
         st.subheader("Prediction Result")
-
         if prediction == 1:
             st.success("Predicted Result: Purchase")
         else:
             st.warning("Predicted Result: No Purchase")
 
-        st.metric(
-            "Purchase Probability",
-            f"{purchase_probability:.2%}"
-        )
-        st.progress(min(max(purchase_probability, 0.0), 1.0))
-
+        st.metric("Purchase Probability", f"{purchase_probability:.2%}")
+        st.progress(float(np.clip(purchase_probability, 0.0, 1.0)))
         st.caption(
             "Class 1 means Purchase. Class 0 means No Purchase. "
             "The probability is the model's estimated likelihood of purchase."
         )
-
     except Exception as error:
         st.error(
-            "The prediction could not be completed. "
-            f"Please check the entered values and model files. Details: {error}"
+            "The prediction could not be completed. Check the entered values "
+            f"and make sure the model file was generated by the updated script. Details: {error}"
         )
 
 st.divider()
-st.caption("Customer Purchase Prediction | Machine Learning Project")
+st.caption("Customer Purchase Prediction | Decision Tree Model")

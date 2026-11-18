@@ -5,8 +5,35 @@ Customer Purchase Prediction Project
 from pathlib import Path
 import os
 
-BASE_DIR = Path(__file__).resolve().parent
-os.chdir(BASE_DIR)
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+# Find the folder containing both Excel datasets.
+# This also handles the case where this script is saved one folder too deep.
+possible_data_folders = [
+    SCRIPT_DIR,
+    SCRIPT_DIR.parent,
+    SCRIPT_DIR / "CDS 4003",
+    SCRIPT_DIR.parent / "CDS 4003"
+]
+
+DATA_DIR = None
+for folder in possible_data_folders:
+    if (
+        (folder / "Training Dataset.xlsx").exists()
+        and (folder / "Testing Dateset.xlsx").exists()
+    ):
+        DATA_DIR = folder
+        break
+
+if DATA_DIR is None:
+    raise FileNotFoundError(
+        "Could not find both dataset files. Place this Python script in the "
+        "same folder as 'Training Dataset.xlsx' and 'Testing Dateset.xlsx', "
+        "or keep the datasets in the parent folder."
+    )
+
+os.chdir(DATA_DIR)
+print("Dataset/output folder:", DATA_DIR)
 
 
 # Import Libraries
@@ -29,10 +56,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import BernoulliNB
-from sklearn.dummy import DummyClassifier
 
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
@@ -45,8 +70,8 @@ from sklearn.metrics import (
 
 # Part 2: Load the Datasets
 
-train = pd.read_excel(BASE_DIR / "Training Dataset.xlsx")
-test = pd.read_excel(BASE_DIR / "Testing Dateset.xlsx")
+train = pd.read_excel(DATA_DIR / "Training Dataset.xlsx")
+test = pd.read_excel(DATA_DIR / "Testing Dateset.xlsx")
 
 print("Training dataset:", train.shape)
 print("Testing dataset:", test.shape)
@@ -177,7 +202,6 @@ print("Rows After Cleaning:", len(train_clean))
 
 
 # Exploratory Data Analysis
-
 
 # Part 6: Exploratory Data Analysis
 
@@ -421,11 +445,6 @@ for name in models:
 
 parameters = {
 
-    "Logistic Regression": {
-        "model__C": [0.01, 0.1, 1, 10],
-        "model__class_weight": [None, "balanced"]
-    },
-
     "Decision Tree": {
         "model__max_depth": [5, 10, 15, 20],
         "model__min_samples_split": [2, 5, 10],
@@ -445,8 +464,6 @@ cv = StratifiedKFold(
 
 best_models = {}
 tuning_results = []
-
-best_models["Baseline"] = models["Baseline"]
 
 for name in parameters:
 
@@ -635,13 +652,10 @@ plt.show()
 
 # Select the Best Model
 
-# Select the model using training cross-validation F1
+# Select the best model using cross-validation F1.
+# Only Decision Tree and Naive Bayes are included in this comparison.
 
-candidate_results = cv_df[
-    cv_df["Model"] != "Baseline"
-]
-
-best_name = candidate_results.sort_values(
+best_name = cv_df.sort_values(
     "F1", ascending=False
 ).iloc[0]["Model"]
 
@@ -655,13 +669,13 @@ best_model.fit(X, y)
 # Save the model
 joblib.dump(
     best_model,
-    BASE_DIR / "customer_purchase_model.pkl"
+    DATA_DIR / "customer_purchase_model.pkl"
 )
 
 # Save feature names
 joblib.dump(
     X.columns.tolist(),
-    BASE_DIR / "model_columns.pkl"
+    DATA_DIR / "model_columns.pkl"
 )
 
 
@@ -714,6 +728,6 @@ print(results_df.to_string(index=False))
 print("\nProject completed successfully.")
 
 
-print("\nSaved files are located in:", BASE_DIR)
-print("Model file:", BASE_DIR / "customer_purchase_model.pkl")
-print("Feature columns:", BASE_DIR / "model_columns.pkl")
+print("\nSaved files are located in:", DATA_DIR)
+print("Model file:", DATA_DIR / "customer_purchase_model.pkl")
+print("Feature columns:", DATA_DIR / "model_columns.pkl")
